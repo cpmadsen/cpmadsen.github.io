@@ -1,4 +1,5 @@
 library(tidyverse)
+library(sf)
 library(rvest)
 library(snakecase)
 library(lubridate)
@@ -19,9 +20,9 @@ usa_dat = bind_rows(
     .[[6]]
   ) %>% 
   setNames(to_snake_case(colnames(.))) %>% 
-  mutate(most_recent_report = my(most_recent_report),
-         last_posted = my(last_posted)) %>% 
-  rename(num_listings = of_listings)
+  mutate(most_recent_report = my(most_recent_report)) %>% 
+  rename(num_listings = of_listings) %>% 
+  select(-last_posted)
   
 can_dat = bind_rows(
   bigfoot %>% 
@@ -32,9 +33,9 @@ can_dat = bind_rows(
     .[[9]]
 ) %>% 
   setNames(to_snake_case(colnames(.))) %>% 
-  mutate(most_recent_report = my(most_recent_report),
-         last_posted = my(last_posted)) %>% 
-  rename(num_listings = of_listings)
+  mutate(most_recent_report = my(most_recent_report)) %>% 
+  rename(num_listings = of_listings) %>% 
+  select(-last_posted)
 
 int_dat = bind_rows(
   bigfoot %>% 
@@ -45,24 +46,34 @@ int_dat = bind_rows(
     .[[12]]
 ) %>% 
   setNames(to_snake_case(colnames(.))) %>% 
-  mutate(most_recent_report = my(most_recent_report),
-         last_posted = my(last_posted)) %>% 
-  rename(num_listings = of_listings)
+  mutate(most_recent_report = my(most_recent_report)) %>% 
+  rename(num_listings = of_listings) %>% 
+  select(-last_posted)
 
 #Get USA state shapefiles, attach bigfoot USA data.
-library(fiftystater)
-usa_sf = sf::st_as_sf(fifty_states, coords = c("long", "lat")) %>% 
-  group_by(id, piece) %>% 
-  summarize(do_union=FALSE) %>%
-  st_cast("POLYGON") %>% 
-  ungroup() %>% 
-  group_by(id) %>% 
-  summarise() %>% 
-  mutate(state = str_to_title(id)) %>% 
-  dplyr::select(-id)
+library(tigris)
+states = tigris::states(resolution = '20m')
 
-usa_sf = usa_states %>% 
+states = st_simplify(states, dTolerance = 500)
+
+usa_sf = states %>% 
+  rename(state = NAME) %>% 
+  select(state) %>% 
   inner_join(usa_dat)
+
+# library(fiftystater)
+# usa_sf = sf::st_as_sf(fifty_states, coords = c("long", "lat")) %>% 
+#   group_by(id, piece) %>% 
+#   summarize(do_union=FALSE) %>%
+#   st_cast("POLYGON") %>% 
+#   ungroup() %>% 
+#   group_by(id) %>% 
+#   summarise() %>% 
+#   mutate(state = str_to_title(id)) %>% 
+#   dplyr::select(-id)
+# 
+# usa_sf = usa_sf %>% 
+#   inner_join(usa_dat)
 
 # Get Canada shapefile, simplify, and attach bigfoot data.
 canada = raster::getData(country = 'CAN', level = 1)
@@ -72,15 +83,30 @@ canada_simple = sf::st_simplify(canada, dTolerance = 500)
 canada_sf = canada_simple %>% 
   mutate(NAME_1 = replace(NAME_1, NAME_1 == "Québec", "Quebec")) %>% 
   rename(province = NAME_1) %>% 
-  inner_join(can_dat)
+  inner_join(can_dat) %>% 
+  select(province,num_listings,most_recent_report)
 
 #Get international country shapefiles, attach bigfoot international data.
-world_sf = rnaturalearth::ne_countries(returnclass = "sf")
+world_sf = rnaturalearth::ne_countries(returnclass = "sf") %>% 
+  mutate(admin = replace(admin, admin == "United States of America","USA"))
+
+int_dat = int_dat %>% 
+  rename(region = country_region) %>% 
+  bind_rows(
+    usa_dat %>% 
+      summarise(num_listings = sum(num_listings),
+                most_recent_report = max(most_recent_report)) %>% 
+      mutate(region = "USA"),
+    can_dat %>% 
+      summarise(num_listings = sum(num_listings),
+                most_recent_report = max(most_recent_report)) %>% 
+      mutate(region = "Canada")
+  )
 
 world_sf = world_sf %>% 
-  rename(country_region = admin) %>% 
+  rename(region = admin) %>% 
   inner_join(int_dat) %>% 
-  select(country_region,num_listings,most_recent_report,last_posted)
+  select(region,num_listings,most_recent_report)
 
 write_sf(usa_sf, "data/usa_bigfoot.gpkg")
 write_sf(canada_sf, "data/canada_bigfoot.gpkg")

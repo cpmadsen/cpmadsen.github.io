@@ -1,33 +1,36 @@
-#
-# This is the user-interface definition of a Shiny web application. You can
-# run the application by clicking 'Run App' above.
-#
-# Find out more about building applications with Shiny here:
-#
-#    http://shiny.rstudio.com/
-#
-
 library(shiny)
+library(tidyverse)
+library(leaflet)
+library(leaflet.extras)
+
+source("01_Basic.R")
+#source("02_BigFoot.R")
+source("03_Advanced.R")
+source("CarouselSlider.R")
 
 # Define UI for application that draws a histogram
-shinyUI(fluidPage(
+ui = navbarPage(
 
-    # Application title
-    titlePanel("Old Faithful Geyser Data"),
-
-    # Sidebar with a slider input for number of bins
-    sidebarLayout(
-        sidebarPanel(
-            sliderInput("bins",
-                        "Number of bins:",
-                        min = 1,
-                        max = 50,
-                        value = 30)
-        ),
-
-        # Show a plot of the generated distribution
-        mainPanel(
-            plotOutput("distPlot")
-        )
-    )
-))
+  # Application title
+  title = "Portfolio",
+  
+  tags$head(
+    tags$link(rel = "stylesheet", type = "text/css", href = "mainpage_styles.css")
+  ),
+  
+  # tabPanel 1 - 
+  tabPanel(title = "Simple Example"),
+  
+  # tabPanel 2 - 
+  tabPanel(title = "Where in the world is Bigfoot?",
+           selectInput(inputId = "bigfoot_filter",
+                       label = "",
+                       multiple = F,
+                       selectize = F,
+                       selected = c("Canada"),
+                       choices = c("Canada","USA","World")),
+           leafletOutput('bigfoot_map')),
+  
+  # tabPanel 3 - 
+  tabPanel(title = "Advanced Example")
+)
