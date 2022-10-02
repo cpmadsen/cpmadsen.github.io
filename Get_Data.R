@@ -81,7 +81,7 @@ canada = st_as_sf(canada)
 canada_simple = sf::st_simplify(canada, dTolerance = 500)
 
 canada_sf = canada_simple %>% 
-  mutate(NAME_1 = replace(NAME_1, NAME_1 == "Qu�bec", "Quebec")) %>% 
+  mutate(NAME_1 = replace(NAME_1, NAME_1 == "Québec", "Quebec")) %>% 
   rename(province = NAME_1) %>% 
   inner_join(can_dat) %>% 
   select(province,num_listings,most_recent_report)
@@ -108,6 +108,48 @@ world_sf = world_sf %>%
   inner_join(int_dat) %>% 
   select(region,num_listings,most_recent_report)
 
-write_sf(usa_sf, "data/usa_bigfoot.gpkg")
-write_sf(canada_sf, "data/canada_bigfoot.gpkg")
-write_sf(world_sf, "data/international_bigfoot.gpkg")
+bigfoot_dat = canada_sf %>% 
+  rename(subunit = province) %>% 
+  mutate(unit = "Canada") %>% 
+  bind_rows(usa_sf %>% 
+              rename(subunit = state) %>% 
+              mutate(unit = "USA")) %>% 
+  bind_rows(world_sf %>% 
+              rename(subunit = region) %>% 
+              mutate(unit = "World"))
+
+bigfoot_dat = bigfoot_dat %>% 
+  mutate(local_name = case_when(
+    subunit == "China" ~ "野人",
+    subunit == "Australia" ~ "Yowie",
+    subunit == "Malaysia" ~ "Apemen",
+    subunit == "Indonesia" ~ "Orang pendek",
+    subunit == "Russia" ~ "Shurale",
+    subunit == "Canada" ~ "Sasquatch",
+    subunit == "USA" ~ "Bigfoot",
+    unit == "Canada" ~ "Sasquatch",
+    unit == "USA" ~ "Bigfoot"
+  )
+  )
+
+write_sf(bigfoot_dat, "data/bigfoot_dat.gpkg")
+# write_sf(usa_sf, "data/usa_bigfoot.gpkg")
+# write_sf(canada_sf, "data/canada_bigfoot.gpkg")
+# write_sf(world_sf, "data/international_bigfoot.gpkg")
+
+# Make centroids that we can use to shift the focus of the 
+# bigfoot map depending on the user input.
+map_centroids = st_coordinates(
+  bind_rows(
+    usa_sf %>% st_centroid() %>% summarise() %>% st_centroid(),
+    canada_sf %>% st_centroid() %>% summarise() %>% st_centroid(),
+    world_sf  %>% 
+      st_make_valid() %>% st_centroid() %>% summarise() %>% st_centroid()
+  )
+) %>% 
+  as.data.frame() %>% 
+  mutate(region = c("USA","Canada","World"),
+         zoom = c(8,8,12)) %>% 
+  as_tibble()
+
+write_csv(map_centroids, "data/map_centroids.csv")

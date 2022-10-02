@@ -1,8 +1,12 @@
-usa_bigfoot = read_sf("data/usa_bigfoot.gpkg")
-canada_bigfoot = read_sf("data/canada_bigfoot.gpkg")
-international_bigfoot = read_sf("data/international_bigfoot.gpkg")
-
 library(shiny)
+library(tidyverse)
+library(sf)
+library(lubridate)
+
+rm(list=ls())
+
+bigfoot_dat = read_sf("data/bigfoot_dat.gpkg")
+map_centroids = read_csv("data/map_centroids.csv")
 
 # Define server logic required to draw a histogram
 shinyServer(function(input, output) {
@@ -13,15 +17,28 @@ shinyServer(function(input, output) {
   
   #If user has filtered Dat(), apply and make MappingDat()
   MappingDat = reactive({
-    if(input$bigfoot_filter == "USA"){
-      return(usa_bigfoot)
-    } 
-    if(input$bigfoot_filter == "Canada"){
-      return(canada_bigfoot)
-    } 
-    if(input$bigfoot_filter == "World"){
-      return(international_bigfoot)
-    } 
+    bigfoot_dat %>% 
+      filter(unit %in% input$bigfoot_filter) %>% 
+      filter(most_recent_report >= input$bigfoot_daterange[1],
+             most_recent_report <= input$bigfoot_daterange[2])
+  })
+  
+  MappingCoords = reactive({
+    map_centroids %>% 
+      filter(region %in% input$bigfoot_filter)
+  })
+  
+  MyPal = reactive({
+    # if(input$bigfoot_plotvar == "Number of reports"){
+    colorNumeric(palette = "Spectral",
+                  domain = MappingDat()$num_listings,
+                  reverse = T)
+    # } 
+    # else if(input$bigfoot_plotvar == "Date of most recent report"){
+    #   colorBin(palette = "Spectral",
+    #                domain = year(MappingDat()$most_recent_report),
+    #                reverse = T)
+    # }
   })
   
   output$bigfoot_map = renderLeaflet({
@@ -35,34 +52,60 @@ shinyServer(function(input, output) {
       addScaleBar(position = "bottomright") %>%
       leaflet.extras::addResetMapButton() %>%
       hideGroup(c("Satellite")) %>% 
-      setView(lat = 60.0812, lng = -102.8931, zoom = 3) %>% 
-      addPolygons(data = canada_bigfoot,
-                  label = ~paste0(num_listings," sightings, most recent: ",most_recent_report)
-      ) %>% 
+      setView(lat = 55.4, lng =  -93.3, zoom = 3) %>%
+      addPolygons(data = bigfoot_dat %>% filter(unit == "Canada"),
+                  label = ~paste0(subunit,",",
+                                  num_listings,
+                                  " sightings of ",local_name,", most recent: ",
+                                  most_recent_report),
+                  color = ~MyPal()(num_listings)
+      ) %>%
+      addLegend(position = "topright",
+                pal = MyPal(),
+                values = MappingDat()$num_listings,
+                layerId = "temp_legend") %>%
       addLayersControl(baseGroups = c("OSM","Satellite"),
                        options = layersControlOptions(collapsed = F))
   })
   
   #Reactively populate the map with polygons (or buffered points)
   # that map users have added.
-  observeEvent(input$bigfoot_filter, {
-    map = leafletProxy("bigfoot_map") %>% 
+  observe({
+    leafletProxy("bigfoot_map") %>% 
       clearShapes() %>% 
+      removeControl(layerId = "temp_legend") %>% 
       addPolygons(data = MappingDat(),
-                  label = ~paste0(num_listings," sightings, most recent: ",most_recent_report)
-      )
+                  label = ~paste0(subunit,", ",
+                                  num_listings,
+                                  " sightings of ",local_name,", most recent: ",
+                                  most_recent_report),
+                  color = ~MyPal()(num_listings)) %>% 
+      addLegend(pal = MyPal(),
+                values = MappingDat()$num_listings) %>% 
+      setView(lng = MappingCoords()$X,
+              lat = MappingCoords()$Y,
+              zoom = MappingCoords()$zoom)
+    # 
     # if(input$bigfoot_filter == "Canada"){
     #   map = map %>% 
-    #     setView(lng = 60.0812, -102.8931, zoom = 8)
-    # }
-    # if(input$bigfoot_filter == "USA"){
+    #     setView(lat = 60.0812, lng = -102.8931, zoom = 3) %>%
+    #     addPolygons(data = canada_bigfoot,
+    #                 label = ~paste0(num_listings," sightings, most recent: ",most_recent_report)
+    #     ) %>% 
+    #     addLegend(pal = MyPal(),
+    #               values = canada_bigfoot$num_listings)
+    # }else if(input$bigfoot_filter == "USA"){
     #   map = map %>% 
-    #     setView(lng = 40.6722, -100.7837, zoom = 8)
-    # }
-    # if(input$bigfoot_filter == "World"){
+    #     setView(lat = 48.0812, lng = -102.8931, zoom = 2) %>%
+    #     addPolygons(data = usa_bigfoot,
+    #                 label = ~paste0(num_listings," sightings, most recent: ",most_recent_report)
+    #     )
+    # }else if(input$bigfoot_filter == "World"){
     #   map = map %>% 
-    #     setView(lng = 0, 0, zoom = 12)
+    #     setView(lat = 40, lng = 0, zoom = 1) %>%
+    #     addPolygons(data = international_bigfoot,
+    #                 label = ~paste0(num_listings," sightings, most recent: ",most_recent_report)
+    #     )
     # }
-  })
-
+    })
 })

@@ -23,13 +23,30 @@ ui = navbarPage(
   
   # tabPanel 2 - 
   tabPanel(title = "Where in the world is Bigfoot?",
-           selectInput(inputId = "bigfoot_filter",
-                       label = "",
-                       multiple = F,
-                       selectize = F,
-                       selected = c("Canada"),
-                       choices = c("Canada","USA","World")),
-           leafletOutput('bigfoot_map')),
+           leafletOutput('bigfoot_map'),
+           absolutePanel(id = "controls", class = "panel panel-default",
+                         top = 75, left = 55, width = 250, fixed=TRUE,
+                         draggable = TRUE, height = "auto",
+                         title = "Bigfoot Data Controls",
+             selectInput(inputId = "bigfoot_filter",
+                         label = "Select Area of Analysis",
+                         multiple = F,
+                         selectize = F,
+                         selected = c("Canada"),
+                         choices = c("Canada","USA","World")),
+             # selectInput(inputId = "bigfoot_plotvar",
+             #             label = "Select Variable to Visualize",
+             #             multiple = F,
+             #             selectize = F,
+             #             selected = ("Number of reports"),
+             #             choices = c("Number of reports","Date of most recent report")),
+             sliderInput(inputId = "bigfoot_daterange",
+                         label = "Select Sighting Date Range",
+                         min = min(bigfoot_dat$most_recent_report),
+                         max = max(bigfoot_dat$most_recent_report),
+                         value = c(min(bigfoot_dat$most_recent_report),
+                                   max(bigfoot_dat$most_recent_report)))
+           )),
   
   # tabPanel 3 - 
   tabPanel(title = "Advanced Example")
