@@ -2,6 +2,10 @@ library(shiny)
 library(tidyverse)
 library(sf)
 library(lubridate)
+library(plotly)
+library(scales)
+library(DT)
+library(feedeR)
 
 rm(list=ls())
 
@@ -11,6 +15,13 @@ map_centroids = read_csv("data/map_centroids.csv")
 # Define server logic required to draw a histogram
 shinyServer(function(input, output) {
 
+  #Load data.
+  bigfoot_dat = read_sf("data/bigfoot_dat.gpkg")
+  map_centroids = read_csv("data/map_centroids.csv")
+  
+  #Make custom bigfoot icon
+  bigfoot_icon = makeIcon("bigfoot_silhouette.png", iconWidth = 24, iconHeight = 30)
+  
   # # # # # # # # # # 
   # Tab 2 - Bigfoot #
   # # # # # # # # # # 
@@ -28,6 +39,11 @@ shinyServer(function(input, output) {
       filter(region %in% input$bigfoot_filter)
   })
   
+  Bigfoot_Location = reactive({
+    MappingDat() %>% 
+      slice_max(most_recent_report) %>% 
+      st_centroid()
+  })
   MyPal = reactive({
     # if(input$bigfoot_plotvar == "Number of reports"){
     colorNumeric(palette = "Spectral",
@@ -60,17 +76,22 @@ shinyServer(function(input, output) {
                                   most_recent_report),
                   color = ~MyPal()(num_listings)
       ) %>%
+      addMarkers(data = Bigfoot_Location(),
+                        icon = bigfoot_icon,
+                 group = "Most Recent Report") %>% 
       addLegend(position = "topright",
                 pal = MyPal(),
                 values = MappingDat()$num_listings,
                 layerId = "temp_legend") %>%
       addLayersControl(baseGroups = c("OSM","Satellite"),
+                       overlayGroups = c("Most Recent Report"),
                        options = layersControlOptions(collapsed = F))
   })
   
   #Reactively populate the map with polygons (or buffered points)
   # that map users have added.
   observe({
+    
     leafletProxy("bigfoot_map") %>% 
       clearShapes() %>% 
       removeControl(layerId = "temp_legend") %>% 
@@ -80,32 +101,85 @@ shinyServer(function(input, output) {
                                   " sightings of ",local_name,", most recent: ",
                                   most_recent_report),
                   color = ~MyPal()(num_listings)) %>% 
+      addMarkers(data = Bigfoot_Location(),
+                        icon = bigfoot_icon) %>% 
       addLegend(pal = MyPal(),
                 values = MappingDat()$num_listings) %>% 
       setView(lng = MappingCoords()$X,
               lat = MappingCoords()$Y,
               zoom = MappingCoords()$zoom)
-    # 
-    # if(input$bigfoot_filter == "Canada"){
-    #   map = map %>% 
-    #     setView(lat = 60.0812, lng = -102.8931, zoom = 3) %>%
-    #     addPolygons(data = canada_bigfoot,
-    #                 label = ~paste0(num_listings," sightings, most recent: ",most_recent_report)
-    #     ) %>% 
-    #     addLegend(pal = MyPal(),
-    #               values = canada_bigfoot$num_listings)
-    # }else if(input$bigfoot_filter == "USA"){
-    #   map = map %>% 
-    #     setView(lat = 48.0812, lng = -102.8931, zoom = 2) %>%
-    #     addPolygons(data = usa_bigfoot,
-    #                 label = ~paste0(num_listings," sightings, most recent: ",most_recent_report)
-    #     )
-    # }else if(input$bigfoot_filter == "World"){
-    #   map = map %>% 
-    #     setView(lat = 40, lng = 0, zoom = 1) %>%
-    #     addPolygons(data = international_bigfoot,
-    #                 label = ~paste0(num_listings," sightings, most recent: ",most_recent_report)
-    #     )
-    # }
     })
+  
+  output$bigfoot_barplot = renderPlotly({
+    
+    plotly::ggplotly(
+      MappingDat() %>% 
+        st_drop_geometry() %>% 
+        mutate(subunit = fct_reorder(subunit,num_listings,.desc=T)) %>% 
+        mutate(subunit = fct_lump(subunit, input$binning_number, w = num_listings)) %>% 
+        group_by(subunit) %>% 
+        summarise(most_recent_report = max(most_recent_report),
+                  num_listings = sum(num_listings)) %>% 
+        ggplot() + 
+        geom_col(aes(x = subunit, y = num_listings)) + 
+        scale_x_discrete(labels = scales::label_wrap(width = 8)) + 
+        coord_flip() +
+        #scale_fill_brewer(palette = "Dark2") +
+        labs(x = "", y = "Number of Reports", title = "Reports by Region") +
+        ggpubr::theme_pubr() + 
+        theme(legend.position = "none")
+   )
+  })
+  
+  output$total_summary = renderInfoBox({
+    infoBox(
+      "Total Summary",
+      MappingDat() %>% 
+        st_drop_geometry() %>% 
+        summarise(total = sum(num_listings)) %>% 
+        pull(total),
+      icon = icon("hashtag"),
+      color = "purple",
+      fill = TRUE
+    )
+  })
+  
+  output$most_recent_report = renderInfoBox({
+    infoBox(
+      "Most Recent Report",
+      MappingDat() %>% 
+        st_drop_geometry() %>% 
+        mutate(most_recent_report = lubridate::ymd(most_recent_report)) %>% 
+        summarise(latest = max(most_recent_report)) %>% 
+        pull(latest),
+      icon = icon("calendar"),
+      color = "orange",
+      fill = TRUE
+    )
+  })
+  
+  output$recent_report_location = renderInfoBox({
+    infoBox(
+      "Most Recent Location",
+      MappingDat() %>% 
+        st_drop_geometry() %>% 
+        arrange(desc(most_recent_report)) %>% 
+        slice(1) %>% 
+        pull(subunit),
+      icon = icon("map"),
+      color = "green",
+      fill = TRUE
+    )
+  })
+  
+  #News feed - slickR carousel
+  output$bigfoot_news_table = renderDataTable({
+    myquery <- feed.extract("https://news.google.com/rss/search?q=Bigfoot")
+    myquery$items %>% 
+      as_tibble() %>% 
+      select(title,date,link) %>% 
+      rename(Title = title, Date = date, Link = link) %>% 
+      mutate(Date = str_extract(as.character(Date),".*(?= )")) %>% 
+      DT::datatable(., options = list(lengthMenu = c(1, 3, 10), pageLength = 1))
+  })
 })

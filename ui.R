@@ -1,12 +1,22 @@
 library(shiny)
+library(shinydashboard)
+library(shinydashboardPlus)
+library(shinyWidgets)
 library(tidyverse)
+library(sf)
 library(leaflet)
 library(leaflet.extras)
+library(plotly)
+library(DT)
+#library(summarywidget)
 
 source("01_Basic.R")
-#source("02_BigFoot.R")
+source("02_BigFoot.R")
 source("03_Advanced.R")
 source("CarouselSlider.R")
+
+bigfoot_dat = read_sf("data/bigfoot_dat.gpkg")
+map_centroids = read_csv("data/map_centroids.csv")
 
 # Define UI for application that draws a histogram
 ui = navbarPage(
@@ -18,35 +28,13 @@ ui = navbarPage(
     tags$link(rel = "stylesheet", type = "text/css", href = "mainpage_styles.css")
   ),
   
+  useShinydashboard(),
+  
   # tabPanel 1 - 
   tabPanel(title = "Simple Example"),
   
   # tabPanel 2 - 
-  tabPanel(title = "Where in the world is Bigfoot?",
-           leafletOutput('bigfoot_map'),
-           absolutePanel(id = "controls", class = "panel panel-default",
-                         top = 75, left = 55, width = 250, fixed=TRUE,
-                         draggable = TRUE, height = "auto",
-                         title = "Bigfoot Data Controls",
-             selectInput(inputId = "bigfoot_filter",
-                         label = "Select Area of Analysis",
-                         multiple = F,
-                         selectize = F,
-                         selected = c("Canada"),
-                         choices = c("Canada","USA","World")),
-             # selectInput(inputId = "bigfoot_plotvar",
-             #             label = "Select Variable to Visualize",
-             #             multiple = F,
-             #             selectize = F,
-             #             selected = ("Number of reports"),
-             #             choices = c("Number of reports","Date of most recent report")),
-             sliderInput(inputId = "bigfoot_daterange",
-                         label = "Select Sighting Date Range",
-                         min = min(bigfoot_dat$most_recent_report),
-                         max = max(bigfoot_dat$most_recent_report),
-                         value = c(min(bigfoot_dat$most_recent_report),
-                                   max(bigfoot_dat$most_recent_report)))
-           )),
+  bigfoot_panel,
   
   # tabPanel 3 - 
   tabPanel(title = "Advanced Example")

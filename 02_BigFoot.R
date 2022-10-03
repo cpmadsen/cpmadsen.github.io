@@ -1,27 +1,63 @@
-output$bigfoot_map = renderLeaflet({
-  leaflet() %>% 
-    addProviderTiles("Esri.WorldImagery",
-                     group = "Satellite",
-                     options = providerTileOptions(minZoom = 2, maxZoom = 19)) %>%
-    addProviderTiles("OpenStreetMap",
-                     group = "OSM",
-                     options = providerTileOptions(minZoom = 2, maxZoom = 19)) %>%
-    addScaleBar(position = "bottomright") %>%
-    #setView(lat = 48.55, -123.340, zoom = 9.5) %>%
-    leaflet.extras::addResetMapButton() %>%
-    hideGroup(c("Satellite")) %>% 
-    addLayersControl(baseGroups = c("OSM","Satellite"),
-                     options = layersControlOptions(collapsed = F))
-})
-
-MappingDat = reactive({
-  
-})
-#Reactively repopulate the map based on the selection.
-observe({
-  leafletProxy("leafmap") %>% 
-    clearShapes() %>% 
-    addPolygons(data = MappingDat(),
-                label = ~paste0(location,": ",productivity)
-    )
-})
+bigfoot_panel = tabPanel(
+  title = "Where in the world is Bigfoot?",
+  fluidRow(
+    column(width = 8,
+           box(title = tagList(shiny::icon("paw"),"Bigfoot in the World"), 
+               status = "navy", 
+               solidHeader = TRUE,
+               collapsible = TRUE,
+               width = 12,
+               leafletOutput('bigfoot_map',width = "100%", height = 400),
+               absolutePanel(id = "controls", class = "panel panel-default",
+                             top = 75, left = 55, width = 250, fixed=TRUE,
+                             draggable = TRUE, height = "auto",
+                             title = "Bigfoot Data Controls",
+                             selectInput(inputId = "bigfoot_filter",
+                                         label = "Select Area of Analysis",
+                                         multiple = F,
+                                         selectize = F,
+                                         selected = c("Canada"),
+                                         choices = c("Canada","USA","World")),
+                             sliderInput(inputId = "bigfoot_daterange",
+                                         label = "Select Sighting Date Range",
+                                         min = min(bigfoot_dat$most_recent_report),
+                                         max = max(bigfoot_dat$most_recent_report),
+                                         value = c(min(bigfoot_dat$most_recent_report),
+                                                   max(bigfoot_dat$most_recent_report)))
+               ) #end of absolute panel for leaflet map of bigfoot.
+           ),
+           infoBoxOutput('total_summary'),
+           infoBoxOutput('most_recent_report'),
+           infoBoxOutput('recent_report_location')
+    ), #end of column 1 in bigfoot page.
+    column(width = 4,
+           box(title = tagList(shiny::icon("map"),"Reports Broken Down by Region"), 
+               status = "purple", 
+               solidHeader = TRUE,
+               collapsible = TRUE,
+               width = 12,
+               height = 200,
+               plotlyOutput('bigfoot_barplot'),
+               absolutePanel(class = "panel panel-default",
+                             top = 1000, left = 1250, width = 250, fixed=TRUE,
+                             draggable = T, height = "auto",
+                             title = "",
+                             numericInput(
+                               inputId = "binning_number",
+                               label = "Number of Groups to Show",
+                               value = 8,
+                               min = 1,
+                               max = 12
+                             )
+               )
+           ),
+           box(title = tagList(shiny::icon("newspaper"),"Bigfoot in the News"), 
+               status = "teal", 
+               solidHeader = TRUE,
+               collapsible = TRUE,
+               width = 12,
+               dataTableOutput('bigfoot_news_table')
+           ) 
+    )#end of column 2 in bigfoot page.
+  ) #End of bottom fluidRow for bigfoot page.
+) #End of bigfoot tabPanel.
