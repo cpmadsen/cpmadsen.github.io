@@ -9,9 +9,9 @@ bigfoot_panel = tabPanel(
                width = 12,
                leafletOutput('bigfoot_map',width = "100%", height = 400),
                absolutePanel(id = "controls", class = "panel panel-default",
-                             top = 75, left = 55, width = 250, fixed=TRUE,
+                             top = 380, left = 55, width = 250, fixed=TRUE,
                              draggable = TRUE, height = "auto",
-                             title = "Bigfoot Data Controls",
+                             #title = "Bigfoot Data Controls",
                              selectInput(inputId = "bigfoot_filter",
                                          label = "Select Area of Analysis",
                                          multiple = F,
@@ -36,28 +36,39 @@ bigfoot_panel = tabPanel(
                solidHeader = TRUE,
                collapsible = TRUE,
                width = 12,
-               height = 200,
-               plotlyOutput('bigfoot_barplot'),
-               absolutePanel(class = "panel panel-default",
-                             top = 1000, left = 1250, width = 250, fixed=TRUE,
-                             draggable = T, height = "auto",
-                             title = "",
-                             numericInput(
-                               inputId = "binning_number",
-                               label = "Number of Groups to Show",
-                               value = 8,
-                               min = 1,
-                               max = 12
-                             )
-               )
-           ),
+               height = 300,
+               numericInput(
+                 inputId = "binning_number",
+                 label = "Number of Groups to Show",
+                 value = 8,
+                 min = 1,
+                 max = 12
+               ),
+               plotlyOutput('bigfoot_barplot')#,
+               # absolutePanel(class = "panel panel-default",
+               #               top = 1000, left = 1250, width = 250, fixed=TRUE,
+               #               draggable = T, height = "auto",
+               #               title = "",
+               #               numericInput(
+               #                 inputId = "binning_number",
+               #                 label = "Number of Groups to Show",
+               #                 value = 8,
+               #                 min = 1,
+               #                 max = 12
+               #               )
+               #)
+           )
+    ) 
+  ),#End of fluidRow 1.
+  fluidRow(
+    column(width = 12, 
            box(title = tagList(shiny::icon("newspaper"),"Bigfoot in the News"), 
                status = "teal", 
                solidHeader = TRUE,
                collapsible = TRUE,
                width = 12,
                dataTableOutput('bigfoot_news_table')
-           ) 
-    )#end of column 2 in bigfoot page.
+           )
+    ) #End of column 1 in fluidRow 2.
   ) #End of bottom fluidRow for bigfoot page.
 ) #End of bigfoot tabPanel.

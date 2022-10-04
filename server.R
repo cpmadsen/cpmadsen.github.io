@@ -6,6 +6,9 @@ library(plotly)
 library(scales)
 library(DT)
 library(feedeR)
+library(slickR)
+library(htmltools)
+library(shinymaterial)
 
 rm(list=ls())
 
@@ -15,9 +18,18 @@ map_centroids = read_csv("data/map_centroids.csv")
 # Define server logic required to draw a histogram
 shinyServer(function(input, output) {
 
-  #Load data.
-  bigfoot_dat = read_sf("data/bigfoot_dat.gpkg")
-  map_centroids = read_csv("data/map_centroids.csv")
+  # #Load data.
+  # bigfoot_dat = read_sf("data/bigfoot_dat.gpkg")
+  # map_centroids = read_csv("data/map_centroids.csv")
+  
+  #Make slickR carousel of background images.
+  # images <- list.files(path = "www/carousel_pictures/",
+  #                             pattern = "png",
+  #                             full.names = T)
+  
+  # output$slickr = renderSlickR({
+  #   slickR(images, width = "1000px",height = "600px")
+  #   })
   
   #Make custom bigfoot icon
   bigfoot_icon = makeIcon("bigfoot_silhouette.png", iconWidth = 24, iconHeight = 30)
