@@ -156,17 +156,14 @@ shinyServer(function(input, output) {
     )
   })
   
-  output$most_recent_report = renderInfoBox({
-    infoBox(
+  output$most_recent_report = renderText({
+    paste0(
       "Most Recent Report",
       MappingDat() %>% 
         st_drop_geometry() %>% 
         mutate(most_recent_report = lubridate::ymd(most_recent_report)) %>% 
         summarise(latest = max(most_recent_report)) %>% 
-        pull(latest),
-      icon = icon("calendar"),
-      color = "orange",
-      fill = TRUE
+        pull(latest)
     )
   })
   
