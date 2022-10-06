@@ -8,7 +8,8 @@ library(DT)
 library(feedeR)
 library(slickR)
 library(htmltools)
-library(shinymaterial)
+#library(shinymaterial)
+#library(shinyuieditor)
 
 rm(list=ls())
 

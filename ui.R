@@ -21,10 +21,7 @@ bigfoot_dat = read_sf("data/bigfoot_dat.gpkg")
 map_centroids = read_csv("data/map_centroids.csv")
 
 # Define UI for application that draws a histogram
-ui = tagList(
-  useShinyjs(),
-  
-  navbarPage(
+ui = navbarPage(
     
     # Application title
     title = "Portfolio",
@@ -46,4 +43,3 @@ ui = tagList(
     # tabPanel 3 - 
     tabPanel(title = "Advanced Example")
   )
-)
