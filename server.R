@@ -18,20 +18,7 @@ map_centroids = read_csv("data/map_centroids.csv")
 # Define server logic required to draw a histogram
 shinyServer(function(input, output) {
 
-  # #Load data.
-  # bigfoot_dat = read_sf("data/bigfoot_dat.gpkg")
-  # map_centroids = read_csv("data/map_centroids.csv")
-  
-  #Make slickR carousel of background images.
-  # images <- list.files(path = "www/carousel_pictures/",
-  #                             pattern = "png",
-  #                             full.names = T)
-  
-  # output$slickr = renderSlickR({
-  #   slickR(images, width = "1000px",height = "600px")
-  #   })
-  
-  #Make custom bigfoot icon
+    #Make custom bigfoot icon
   bigfoot_icon = makeIcon("bigfoot_silhouette.png", iconWidth = 24, iconHeight = 30)
   
   # # # # # # # # # # 
@@ -41,9 +28,10 @@ shinyServer(function(input, output) {
   #If user has filtered Dat(), apply and make MappingDat()
   MappingDat = reactive({
     bigfoot_dat %>% 
+      mutate(Year = year(most_recent_report)) %>% 
       filter(unit %in% input$bigfoot_filter) %>% 
-      filter(most_recent_report >= input$bigfoot_daterange[1],
-             most_recent_report <= input$bigfoot_daterange[2])
+      filter(Year >= input$bigfoot_daterange[1],
+             Year <= input$bigfoot_daterange[2])
   })
   
   MappingCoords = reactive({
@@ -143,22 +131,17 @@ shinyServer(function(input, output) {
    )
   })
   
-  output$total_summary = renderInfoBox({
-    infoBox(
-      "Total Summary",
+  output$total_summary = renderText({
+    paste0(
       MappingDat() %>% 
         st_drop_geometry() %>% 
         summarise(total = sum(num_listings)) %>% 
-        pull(total),
-      icon = icon("hashtag"),
-      color = "purple",
-      fill = TRUE
+        pull(total)
     )
   })
   
   output$most_recent_report = renderText({
-    paste0(
-      "Most Recent Report",
+      paste0(
       MappingDat() %>% 
         st_drop_geometry() %>% 
         mutate(most_recent_report = lubridate::ymd(most_recent_report)) %>% 
@@ -167,17 +150,13 @@ shinyServer(function(input, output) {
     )
   })
   
-  output$recent_report_location = renderInfoBox({
-    infoBox(
-      "Most Recent Location",
+  output$recent_report_location = renderText({
+    paste0(
       MappingDat() %>% 
         st_drop_geometry() %>% 
         arrange(desc(most_recent_report)) %>% 
         slice(1) %>% 
-        pull(subunit),
-      icon = icon("map"),
-      color = "green",
-      fill = TRUE
+        pull(subunit)
     )
   })
   
