@@ -1,38 +1,12 @@
-library(shiny)
-library(tidyverse)
-library(sf)
-library(lubridate)
-library(plotly)
-library(scales)
-library(DT)
-library(feedeR)
-library(slickR)
-library(htmltools)
-#library(shinymaterial)
-#library(shinyuieditor)
-
 rm(list=ls())
+setwd("F:/R Projects/cpmadsen.github.io")
 
-bigfoot_dat = read_sf("data/bigfoot_dat.gpkg")
-map_centroids = read_csv("data/map_centroids.csv")
+
 
 # Define server logic required to draw a histogram
 shinyServer(function(input, output) {
 
-  # #Load data.
-  # bigfoot_dat = read_sf("data/bigfoot_dat.gpkg")
-  # map_centroids = read_csv("data/map_centroids.csv")
-  
-  #Make slickR carousel of background images.
-  # images <- list.files(path = "www/carousel_pictures/",
-  #                             pattern = "png",
-  #                             full.names = T)
-  
-  # output$slickr = renderSlickR({
-  #   slickR(images, width = "1000px",height = "600px")
-  #   })
-  
-  #Make custom bigfoot icon
+    #Make custom bigfoot icon
   bigfoot_icon = makeIcon("bigfoot_silhouette.png", iconWidth = 24, iconHeight = 30)
   
   # # # # # # # # # # 
@@ -42,9 +16,10 @@ shinyServer(function(input, output) {
   #If user has filtered Dat(), apply and make MappingDat()
   MappingDat = reactive({
     bigfoot_dat %>% 
+      mutate(Year = year(most_recent_report)) %>% 
       filter(unit %in% input$bigfoot_filter) %>% 
-      filter(most_recent_report >= input$bigfoot_daterange[1],
-             most_recent_report <= input$bigfoot_daterange[2])
+      filter(Year >= input$bigfoot_daterange[1],
+             Year <= input$bigfoot_daterange[2])
   })
   
   MappingCoords = reactive({
@@ -144,44 +119,32 @@ shinyServer(function(input, output) {
    )
   })
   
-  output$total_summary = renderInfoBox({
-    infoBox(
-      "Total Summary",
+  output$total_summary = renderText({
+    paste0(
       MappingDat() %>% 
         st_drop_geometry() %>% 
         summarise(total = sum(num_listings)) %>% 
-        pull(total),
-      icon = icon("hashtag"),
-      color = "purple",
-      fill = TRUE
+        pull(total)
     )
   })
   
-  output$most_recent_report = renderInfoBox({
-    infoBox(
-      "Most Recent Report",
+  output$most_recent_report = renderText({
+      paste0(
       MappingDat() %>% 
         st_drop_geometry() %>% 
         mutate(most_recent_report = lubridate::ymd(most_recent_report)) %>% 
         summarise(latest = max(most_recent_report)) %>% 
-        pull(latest),
-      icon = icon("calendar"),
-      color = "orange",
-      fill = TRUE
+        pull(latest)
     )
   })
   
-  output$recent_report_location = renderInfoBox({
-    infoBox(
-      "Most Recent Location",
+  output$recent_report_location = renderText({
+    paste0(
       MappingDat() %>% 
         st_drop_geometry() %>% 
         arrange(desc(most_recent_report)) %>% 
         slice(1) %>% 
-        pull(subunit),
-      icon = icon("map"),
-      color = "green",
-      fill = TRUE
+        pull(subunit)
     )
   })
   
@@ -195,4 +158,46 @@ shinyServer(function(input, output) {
       mutate(Date = str_extract(as.character(Date),".*(?= )")) %>% 
       DT::datatable(., options = list(lengthMenu = c(1, 3, 10), pageLength = 1))
   })
+  
+  # CYCLING IN THE UK #
+  
+  # CyclePal() = reactive({
+  #   colorNumeric(palette = 'Spectral',
+  #                         domain = cycling_dat()$AccNumber)
+  # })
+
+  # cycling_dat = reactive({
+  #   uk_map_polys %>%
+  #     left_join(uk_map_dat %>% filter(Year %in% input$cycling_year))
+  # })
+
+  cycling_dat = uk_map_polys %>%
+    left_join(uk_map_dat %>% mutate(Year = ymd(paste0(Year,"-01-01"))))
+  
+  output$cycling = renderLeaflet({
+
+    leaflet() %>%
+      addProviderTiles("Esri.WorldImagery",
+                       group = "Satellite",
+                       options = providerTileOptions(minZoom = 2, maxZoom = 19)) %>%
+      addProviderTiles("OpenStreetMap",
+                       group = "OSM",
+                       options = providerTileOptions(minZoom = 2, maxZoom = 19)) %>%
+      addScaleBar(position = "bottomright") %>%
+      addPolygons(data = cycling_dat) %>% 
+      leaflet.extras::addResetMapButton() %>%
+      leaflet.extras2::addTimeslider() %>%
+      hideGroup(c("Satellite")) %>%
+      setView(lat = 55.4, lng =  -93.3, zoom = 3) %>%
+      addLayersControl(baseGroups = c("OSM","Satellite"),
+                       overlayGroups = c("Most Recent Report"),
+                       options = layersControlOptions(collapsed = F))
+  })
+
+  # observe({
+  #   leafletProxy('cycling') %>%
+  #     clearShapes() %>%
+  #     addPolygons(data = cycling_dat(),
+  #                 label = ~paste0(AccNumber," mortal or serious injuries while cycling"))
+  # })
 })
