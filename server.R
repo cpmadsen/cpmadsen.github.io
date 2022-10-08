@@ -1,5 +1,3 @@
-
-
 rm(list=ls())
 setwd("F:/R Projects/cpmadsen.github.io")
 
