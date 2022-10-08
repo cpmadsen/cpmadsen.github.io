@@ -2,26 +2,37 @@ library(shiny)
 library(shinydashboard)
 library(shinydashboardPlus)
 library(shinyWidgets)
+library(shinymaterial)
+library(shinyjs)
 library(tidyverse)
 library(sf)
-library(shinyjs)
 library(leaflet)
 library(leaflet.extras)
+library(leaflet.extras2)
 library(plotly)
 library(DT)
-library(shinyWidgets)
-library(shinymaterial)
+library(lubridate)
+library(scales)
+library(feedeR)
+library(slickR)
+library(htmltools)
+
+rm(list = ls())
+setwd("F:/R Projects/cpmadsen.github.io/")
+
+bigfoot_dat = read_sf("data/bigfoot_dat.gpkg")
+map_centroids = read_csv("data/map_centroids.csv")
+uk_map_polys = read_sf("data/cyclingUK/uk_map_polys.gpkg")
+uk_map_dat = read_csv("data/cyclingUK/uk_map_data.csv")
+background_img_1 = "carousel_pictures/Germany_Dresden_ForestCenterTown.png"
+background_img_2 = "carousel_pictures/river_view.png"
+background_img_3 = "carousel_pictures/Germany_BlackForest.png"
 
 source("00_MainPage.R")
 source("01_Basic.R")
 source("02_BigFoot.R")
-source("03_Advanced.R")
+source("03_UK_Cycling.R")
 
-bigfoot_dat = read_sf("data/bigfoot_dat.gpkg")
-map_centroids = read_csv("data/map_centroids.csv")
-background_img_1 = "carousel_pictures/Germany_Dresden_ForestCenterTown.png"
-background_img_2 = "carousel_pictures/river_view.png"
-background_img_3 = "carousel_pictures/Germany_BlackForest.png"
 
 # Define UI for application that draws a histogram
 ui = material_page(
@@ -37,7 +48,7 @@ ui = material_page(
     tabs = c("Home" = "home",
              "Example 1" = "example_1",
              "Where in the World is Bigfoot?" = "bigfoot_tab",
-             "Example 3" = "example_3")
+             "Cycling in England" = "uk_cycling")
   ),
   #Define tab content.
   
@@ -53,13 +64,7 @@ ui = material_page(
   
   bigfoot_panel,
   
-  material_tab_content(
-    tab_id = 'example_3',
-    material_card(
-      title = "Card",
-      h1("Hello world!")
-    )
-  )
+  cycling_panel
   # tabPanel 1 - 
   # tabPanel(title = "Simple Example"),
   # 

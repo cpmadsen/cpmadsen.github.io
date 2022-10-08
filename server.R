@@ -1,19 +1,9 @@
-library(shiny)
-library(tidyverse)
-library(sf)
-library(lubridate)
-library(plotly)
-library(scales)
-library(DT)
-library(feedeR)
-library(slickR)
-library(htmltools)
-library(shinymaterial)
+
 
 rm(list=ls())
+setwd("F:/R Projects/cpmadsen.github.io")
 
-bigfoot_dat = read_sf("data/bigfoot_dat.gpkg")
-map_centroids = read_csv("data/map_centroids.csv")
+
 
 # Define server logic required to draw a histogram
 shinyServer(function(input, output) {
@@ -170,4 +160,46 @@ shinyServer(function(input, output) {
       mutate(Date = str_extract(as.character(Date),".*(?= )")) %>% 
       DT::datatable(., options = list(lengthMenu = c(1, 3, 10), pageLength = 1))
   })
+  
+  # CYCLING IN THE UK #
+  
+  # CyclePal() = reactive({
+  #   colorNumeric(palette = 'Spectral',
+  #                         domain = cycling_dat()$AccNumber)
+  # })
+
+  # cycling_dat = reactive({
+  #   uk_map_polys %>%
+  #     left_join(uk_map_dat %>% filter(Year %in% input$cycling_year))
+  # })
+
+  cycling_dat = uk_map_polys %>%
+    left_join(uk_map_dat %>% mutate(Year = ymd(paste0(Year,"-01-01"))))
+  
+  output$cycling = renderLeaflet({
+
+    leaflet() %>%
+      addProviderTiles("Esri.WorldImagery",
+                       group = "Satellite",
+                       options = providerTileOptions(minZoom = 2, maxZoom = 19)) %>%
+      addProviderTiles("OpenStreetMap",
+                       group = "OSM",
+                       options = providerTileOptions(minZoom = 2, maxZoom = 19)) %>%
+      addScaleBar(position = "bottomright") %>%
+      addPolygons(data = cycling_dat) %>% 
+      leaflet.extras::addResetMapButton() %>%
+      leaflet.extras2::addTimeslider() %>%
+      hideGroup(c("Satellite")) %>%
+      setView(lat = 55.4, lng =  -93.3, zoom = 3) %>%
+      addLayersControl(baseGroups = c("OSM","Satellite"),
+                       overlayGroups = c("Most Recent Report"),
+                       options = layersControlOptions(collapsed = F))
+  })
+
+  # observe({
+  #   leafletProxy('cycling') %>%
+  #     clearShapes() %>%
+  #     addPolygons(data = cycling_dat(),
+  #                 label = ~paste0(AccNumber," mortal or serious injuries while cycling"))
+  # })
 })

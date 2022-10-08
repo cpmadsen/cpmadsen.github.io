@@ -1,3 +1,4 @@
+library(geodata)
 library(tidyverse)
 library(sf)
 library(rvest)
@@ -153,3 +154,103 @@ map_centroids = st_coordinates(
   as_tibble()
 
 write_csv(map_centroids, "data/map_centroids.csv")
+
+
+
+
+#### Cycling in the UK
+
+setwd("data/cyclingUK/")
+
+uk_map = read_sf('UK_DISTRICTS_COUNTIES_CENSUS2011.shp')
+
+uk_map = uk_map %>%
+  dplyr::select(LAD11NM,ALL_RES) %>%
+  rename(name = LAD11NM,
+         population = ALL_RES)
+
+uk_map_simpler = uk_map %>%
+  st_make_valid() %>%
+  group_by(name) %>%
+  summarise(population = sum(population)) %>%
+  st_simplify(uk_map, dTolerance = 1000)
+
+
+ggplot() + geom_sf(data = uk_map_simpler %>% filter(name == "Birmingham")) + 
+  geom_sf(data = uk_map %>% filter(name == "Birmingham"))
+
+# Subset the geographic data for just those areas we have data.
+uk_map_sub = 
+  uk_map_simpler %>% 
+  filter(str_detect(name, "(Yorkshire|Cambridgeshire|Bristol|Manchester|Norwich|Birmingham)")) %>%
+  mutate(name = replace(name, str_detect(name, "Cambridgeshire"), "Cambridgeshire")) %>% 
+  group_by(name) %>% 
+  summarise(population = sum(population)) %>% 
+  mutate(region = case_when(
+    name == "Cambridgeshire" ~ "East of England", 
+    name == "Bristol, City of" ~ "South West", 
+    name == "Birmingham" ~ "West Midlands", 
+    name == "East Riding of Yorkshire" ~ "Yorkshire and the Humber", 
+    name == "Manchester" ~ "North West", 
+    name == "Norwich" ~ "East of England"
+  ))
+
+ggplot() + geom_sf(data = uk_map_sub)
+
+# Read in cycling data.
+cycle_safety_fund = readxl::read_excel('Cycling-Walking-Investment-Schedule.xlsx', 
+                   sheet = 'Cycle Safety Fund', skip = 1) %>% 
+  setNames(to_snake_case(colnames(.))) %>% 
+  .[-7,c(2,5)] %>% 
+  setNames(c('city','y2018_19')) %>% 
+  mutate(city = case_when(
+    str_detect(city, "Bristol") ~ "Bristol, City of",
+    str_detect(city, "Birmingham") ~ "Birmingham",
+    str_detect(city, "Cambridgeshire") ~ "Cambridgeshire",
+    str_detect(city, "Yorkshire") ~ "East Riding of Yorkshire",
+    str_detect(city, "Manchester") ~ "Manchester",
+    str_detect(city, "Norwich") ~ "Norwich",
+    T ~ "Missing"
+  )) %>% 
+  rename(name = city)
+
+# Attach the cycling data.
+uk_map_sub = uk_map_sub %>% 
+  inner_join(cycle_safety_fund)
+
+# traffic_accidents = c(2012:2021) %>% 
+#   map(~ readxl::read_excel('All_road_accidents_not_just_cycling.xlsx', sheet = paste0('NTS0623_',as.character(.x))) %>% 
+#         mutate(year = .x)) %>% 
+#   map(~ .x %>% .[c(10:19),c(1,7,8)] %>% 
+#         setNames(c("TrafficAccidents","Unweighted"))) %>% 
+#   bind_rows()
+# 
+# colnames(traffic_accidents)[2] = "NationalTrafficAccidents"
+# colnames(traffic_accidents)[3] = "Year"
+# 
+# #Attach the traffic accident data
+# uk_map_sub %>% 
+#   left_join(traffic_accidents %>% 
+#               mutate(NationalTrafficAccidents = as.numeric(NationalTrafficAccidents)) %>% 
+#               group_by(Year) %>% 
+#               summarise(NationalTrafficAccidents = sum(NationalTrafficAccidents)))
+
+# Read in cycling-specific accidents
+#cycling_acc_outcomes = readxl::read_excel('CyclingAccidentOutcomes_byOutcome.xlsx')
+
+cycling_acc_regions = readxl::read_excel('CyclingAccidentOutcomes_region.xlsx')
+
+uk_map_sub = uk_map_sub %>% 
+  left_join(cycling_acc_regions %>% 
+              rename(region = Region))
+
+map_data = uk_map_sub %>% 
+  st_drop_geometry() %>% 
+  pivot_longer(cols = starts_with('20'), names_to = 'Year', values_to = 'AccNumber')
+  
+uk_map_sub = uk_map_sub %>% 
+  select(name)
+
+write_csv(map_data, "data/cyclingUK/uk_map_data.csv")
+
+write_sf(uk_map_sub,"data/cyclingUK/uk_map_polys.gpkg")

@@ -2,7 +2,7 @@
 # background_img_2 = "carousel_pictures/river_view.png"
 # background_img_3 = "carousel_pictures/Germany_BlackForest.png"
 
-home_panel = material_tab_content(
+main_page = material_tab_content(
   tab_id = "home",
 
   #tags$script(src = "Javascript_Parallax.js"),
