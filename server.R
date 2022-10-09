@@ -2,11 +2,10 @@ rm(list=ls())
 setwd("F:/R Projects/cpmadsen.github.io")
 
 
-
 # Define server logic required to draw a histogram
 shinyServer(function(input, output) {
 
-    #Make custom bigfoot icon
+  #Make custom bigfoot icon
   bigfoot_icon = makeIcon("bigfoot_silhouette.png", iconWidth = 24, iconHeight = 30)
   
   # # # # # # # # # # 
@@ -67,13 +66,14 @@ shinyServer(function(input, output) {
       addMarkers(data = Bigfoot_Location(),
                         icon = bigfoot_icon,
                  group = "Most Recent Report") %>% 
-      addLegend(position = "topright",
+      addLegend(position = "bottomleft",
                 pal = MyPal(),
                 values = MappingDat()$num_listings,
                 layerId = "temp_legend") %>%
       addLayersControl(baseGroups = c("OSM","Satellite"),
                        overlayGroups = c("Most Recent Report"),
-                       options = layersControlOptions(collapsed = F))
+                       options = layersControlOptions(collapsed = F),
+                       position = "bottomleft")
   })
   
   #Reactively populate the map with polygons (or buffered points)
@@ -119,35 +119,44 @@ shinyServer(function(input, output) {
    )
   })
   
-  output$total_summary = renderText({
-    paste0(
-      MappingDat() %>% 
-        st_drop_geometry() %>% 
-        summarise(total = sum(num_listings)) %>% 
-        pull(total)
+  output$total_summary = renderInfoBox({
+    infoBox(
+      "Total Reports",
+        MappingDat() %>%
+          st_drop_geometry() %>%
+          summarise(total = sum(num_listings)) %>%
+          pull(total),
+      icon = icon("credit-card"),
+      color = 'lime', fill = T
     )
   })
   
-  output$most_recent_report = renderText({
-      paste0(
+  output$most_recent_date = renderInfoBox({
+    infoBox(
+      "Most Recent Report",
       MappingDat() %>% 
         st_drop_geometry() %>% 
         mutate(most_recent_report = lubridate::ymd(most_recent_report)) %>% 
         summarise(latest = max(most_recent_report)) %>% 
-        pull(latest)
+        pull(latest),
+      icon = icon("credit-card"),
+      color = 'orange', fill = T
     )
   })
   
-  output$recent_report_location = renderText({
-    paste0(
+  output$most_recent_place = renderInfoBox({
+    infoBox(
+      "Recent Report Location",
       MappingDat() %>% 
         st_drop_geometry() %>% 
         arrange(desc(most_recent_report)) %>% 
         slice(1) %>% 
-        pull(subunit)
+        pull(subunit),
+      icon = icon("credit-card"),
+      color = 'purple', fill = T
     )
   })
-  
+
   #News feed - slickR carousel
   output$bigfoot_news_table = renderDataTable({
     myquery <- feed.extract("https://news.google.com/rss/search?q=Bigfoot")
