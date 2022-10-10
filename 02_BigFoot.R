@@ -1,41 +1,16 @@
 ### Measurements used throughout the UI design.
 
-map_height = '500px'
+bf_map_height = '500px'
 
 ### Elements within the tab
 
-# # 1. Map controls
-# mapcontrol_element = shinydashboardPlus::box(
-#   collapsible = T,
-#   width = 12,
-#   height = map_height,
-#   status = 'warning',
-#   icon = icon('gear'),
-#   title = "Map Controls",
-#   selectInput(inputId = "bigfoot_filter",
-#               label = "Select Area of Analysis",
-#               multiple = F,
-#               selectize = F,
-#               selected = c("Canada"),
-#               choices = c("Canada","USA","World")),
-#   sliderInput(inputId = "bigfoot_daterange",
-#               label = "Select Sighting Date Range",
-#               min = year(min(bigfoot_dat$most_recent_report)),
-#               max = year(max(bigfoot_dat$most_recent_report)),
-#               value = c(year(min(bigfoot_dat$most_recent_report)),
-#                         year(max(bigfoot_dat$most_recent_report))),
-#               timeFormat = "%YYYY",
-#               sep = ""
-#   ),
-#   footer = 'test footer')
-
-# 2. Map for center of dashboard tab.
-map_element = shinydashboardPlus::box(
+# 1. Map for center of dashboard tab.
+bf_map_element = shinydashboardPlus::box(
   title = tagList(shiny::icon("paw"),"Bigfoot in the World"), 
   status = "success",
   solidHeader = T,
   width = 12,
-  height = map_height,
+  height = bf_map_height,
   sidebar = boxSidebar(
     id = 'mapcontrol_sidebar',
     width = 50,
@@ -55,13 +30,13 @@ map_element = shinydashboardPlus::box(
                 timeFormat = "%YYYY",
                 sep = "")
   ),
-  leafletOutput('bigfoot_map',height = map_height))
+  leafletOutput('bigfoot_map',height = bf_map_height))
 
-# 3. Vertical bar plot for beside map.
-vertbarplot_element = shinydashboardPlus::box(
+# 2. Vertical bar plot for beside map.
+bf_vertbarplot_element = shinydashboardPlus::box(
   title = tagList(shiny::icon("map"),"Reports Broken Down by Region"), 
   width = 12,
-  height = map_height,
+  height = bf_map_height,
   numericInput(
     inputId = "binning_number",
     label = "Number of Groups to Show",
@@ -72,16 +47,16 @@ vertbarplot_element = shinydashboardPlus::box(
   plotlyOutput('bigfoot_barplot')
 )     
 
-# 4. Summary Blocks
+# 3. Summary Blocks
 
-totalnumber_element = infoBoxOutput('total_summary')
+bf_totalnumber_element = infoBoxOutput('total_summary')
 
-recentdate_element = infoBoxOutput('most_recent_date')
+bf_recentdate_element = infoBoxOutput('most_recent_date')
 
-recentplace_element = infoBoxOutput('most_recent_place')
+bf_recentplace_element = infoBoxOutput('most_recent_place')
 
-# 5. Bigfoot in the news.
-bigfootnews_element = shinydashboardPlus::box(
+# 4. Bigfoot in the news.
+bfnews_element = shinydashboardPlus::box(
   title = tagList(shiny::icon("newspaper"),"Bigfoot in the News"),
   #gradient = T,
   width = 12,
@@ -95,17 +70,17 @@ bigfootnews_element = shinydashboardPlus::box(
 
 toprow_block = fluidRow(
   #column(width = 3, mapcontrol_element),
-  column(width = 8, map_element),
-  column(width = 4, vertbarplot_element)
+  column(width = 8, bf_map_element),
+  column(width = 4, bf_vertbarplot_element)
 )
 
 middlerow_block = fluidRow(
-  totalnumber_element,
-  recentdate_element,
-  recentplace_element
+  bf_totalnumber_element,
+  bf_recentdate_element,
+  bf_recentplace_element
 )
 
-bottomrow_block = fluidRow(bigfootnews_element)
+bottomrow_block = fluidRow(bfnews_element)
 
 ### Panel design
 

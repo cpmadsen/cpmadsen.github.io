@@ -254,3 +254,71 @@ uk_map_sub = uk_map_sub %>%
 write_csv(map_data, "data/cyclingUK/uk_map_data.csv")
 
 write_sf(uk_map_sub,"data/cyclingUK/uk_map_polys.gpkg")
+
+
+### Just England traffic map.
+england_sf = rnaturalearth::ne_states(geounit = 'england', returnclass = 'sf')
+
+uk_traffic_dat = readxl::read_excel('data/cyclingUK/CyclingAccidentOutcomes_region.xlsx') %>% 
+  rename(region = Region) %>% 
+  mutate(region = case_when(
+    region == "London" ~ "Greater London",
+    region == "East of England" ~ "East",
+    T ~ region))
+
+england_sf = england_sf %>% 
+  group_by(region) %>% 
+  summarise()
+
+cyclingaccidents = england_sf %>% 
+  left_join(uk_traffic_dat)
+
+cyclingaccidents_l = cyclingaccidents %>% 
+  pivot_longer(cols = starts_with('20'), names_to = 'year', values_to = 'num_accidents')
+
+cyclingaccidents_l = cyclingaccidents_l %>% 
+  mutate(year = as.numeric(year),
+         num_accidents = round(num_accidents))
+
+# Cycle Rail Awards
+
+rail_awards = read_csv('data/cyclingUK/cycle-rail-fund-awards.csv')
+
+rail_awards = rail_awards %>% 
+  mutate(Region = case_when(
+    str_detect(Region, "York") ~ "Yorkshire and the Humber",
+    Region == "East/South East" ~ "East",
+    Region == "East of England" ~ "East",
+    Region == "London" ~ "Greater London",
+    Region == "NorthWest" ~ "North West",
+    Region == "East of England and West Midlands" ~ "East",
+    Region == "South" ~ "South West",
+    T ~ Region
+  ))
+
+rail_awards = rail_awards %>% 
+  setNames(snakecase::to_snake_case(colnames(.))) %>% 
+  mutate(financial_year = str_extract(financial_year,"[0-9]*(?=\\/)")) %>%
+  mutate(total_scheme_cost = as.numeric(str_remove(str_extract(total_scheme_cost,"[0-9]{1}.*"), "\\,")),
+         df_t_funding = as.numeric(str_remove(str_extract(df_t_funding,"[0-9]{1}.*"), "\\,"))) %>% 
+  group_by(region,financial_year) %>% 
+  summarise(annual_total_schemes_cost = sum(total_scheme_cost,na.rm=T),
+            annual_df_t_funding = sum(df_t_funding,na.rm=T),
+            total_projects_by_region = n()) %>% 
+  filter(!is.na(region))
+
+cyclingaccidents_l = cyclingaccidents_l %>% 
+  left_join(rail_awards %>% 
+              rename(year = financial_year) %>% 
+              mutate(year = as.numeric(year))) 
+
+write_sf(cyclingaccidents_l, "data/cyclingUK/uk_cyclingaccidents.gpkg")
+
+#Yearly accident outcome summaries
+uk_cyclingacc_outcomes = readxl::read_excel('data/cyclingUK/CyclingAccidentOutcomes_byOutcome.xlsx')
+uk_cyclingacc_outcomes = uk_cyclingacc_outcomes %>% 
+  pivot_longer(cols = starts_with('20'), names_to = 'year', values_to = 'num_accidents') %>% 
+  mutate(year = as.numeric(year)) %>% 
+  mutate(num_accidents = round(num_accidents))
+openxlsx::write.xlsx(uk_cyclingacc_outcomes,
+                     'data/cyclingUK/cycling_accident_outcome_summaries.xlsx')
