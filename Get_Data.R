@@ -10,6 +10,24 @@ library(rgeos)
 rm(list = ls())
 gc()
 
+rock_dat = data.frame(year = rep(2022,12),
+                      month = rep(c("Jan","Feb","Mar","Apr","May","Jun"),2),
+                      location = c(rep("Vancouver",6),
+                                   rep("Victoria",6)),
+                      revenue = c(25432,26573,27772,24324,25829,29384,
+                                  18532,19221,18758,16773,17739,18310),
+                      cost = c(14322,14887,15234,13220,15832,15992,
+                               13892,13678,13809,14210,14323,14609),
+                      members = c(812,822,1002,982,1010,1182,
+                                  512,533,610,598,578,610),
+                      employees = c(42,43,43,47,46,51,
+                                    28,31,34,33,40,39)) %>% 
+  as_tibble() %>% 
+  mutate(gross_profit = revenue-cost) %>% 
+  mutate(date = lubridate::ymd(paste0(year,"-",month,"-01")))
+
+write_csv(rock_dat, 'data/rock_dat.csv')
+
 bigfoot = read_html("https://www.bfro.net/GDB/default.asp")
 
 usa_dat = bind_rows(

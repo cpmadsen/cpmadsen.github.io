@@ -2,9 +2,9 @@
 
 
 # Parallax HTML script.
-parallax_image = function(image_path = NA){
+parallax_image = function(image_path = NA,background_number = 1){
   
-  div(tags$style(paste0('.parallax {
+  div(tags$style(paste0('.parallax',background_number,' {
   /* The image used */
   background-image: url(',image_path,');
 
@@ -17,6 +17,6 @@ parallax_image = function(image_path = NA){
   background-repeat: no-repeat;
   background-size: cover;
 }')),
-      div(class = 'parallax')
+      div(class = paste0('parallax',background_number))
   )
 }
